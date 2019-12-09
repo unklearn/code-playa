@@ -1,24 +1,36 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
+import Sidebar from 'components/sidebar/index.js';
+import { ChapterGroup, NewChapterGroup} from 'components/chapter-group';
+import { ChapterPlayer } from 'components/player';
+import { CodeMirrorPlayer } from 'components/code-player';
 
+
+
+// Context subscribers will then re-render.
+// Player component holds top-level context.
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+    <div className='App'>
+      <header className='App-header'>
+
       </header>
+      <Sidebar>
+        <ChapterGroup
+          title={'Introduction'}
+          chapters={[{
+            id: 'chapter-1',
+            label: 'Setting up'
+          }, {
+            id: 'chapter-2',
+            label: 'Installation instructions'
+          }]}
+        />
+        <NewChapterGroup/>
+      </Sidebar>
+      <main>
+        <CodeMirrorPlayer editing/>
+      </main>
     </div>
   );
 }

@@ -1,14 +1,14 @@
 .App {
-  text-align: center;
+
 }
 
 .App-logo {
-  height: 40vmin;
+  height: 50px;
 }
 
 .App-header {
   background-color: #282c34;
-  min-height: 100vh;
+  min-height: 50px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -19,4 +19,13 @@
 
 .App-link {
   color: #09d3ac;
+}
+
+main {
+  margin-left: calc(20% + 50px);
+  padding: 25px;
+}
+
+.CodeMirror {
+  font-size: 16px;
 }

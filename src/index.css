@@ -11,3 +11,23 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+
+textarea::-webkit-input-placeholder {
+  color: #c5c5c5;
+}
+
+textarea:-moz-placeholder { /* Firefox 18- */
+  color: #c5c5c5;
+}
+
+textarea::-moz-placeholder {  /* Firefox 19+ */
+  color: #c5c5c5;
+}
+
+textarea:-ms-input-placeholder {
+  color: #c5c5c5;
+}
+
+textarea::placeholder {
+  color: #c5c5c5;
+}

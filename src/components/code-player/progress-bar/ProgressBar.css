@@ -1,0 +1,30 @@
+.unk-code-playa-progress-bar {
+	height: 2px;
+  width: 100%;
+  background: #d6d6d6;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.unk-code-playa-progress-bar:hover {
+	background: #ffffff;
+}
+
+.unk-code-playa-progress-bar__handle {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	display: inline-block;
+	position: absolute;
+	background: #ffffff;
+  border: 2px solid #e60000;
+	left: 0px;
+	cursor: pointer;
+	transition: 0.1s background linear;
+	transition: 0.1s border-color linear;
+	top: -7px;
+}
+
+.unk-code-playa-progress-bar__handle:hover {
+	border-color: #4a92ff;
+}
