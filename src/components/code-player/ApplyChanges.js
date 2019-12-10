@@ -58,6 +58,7 @@ export class ChangeRecordStream {
    */
   play() {
     this.playing = true;
+    console.log(this.lastCoveredTimeStamp);
     this.resume(this.lastCoveredTimeStamp);
   }
 
@@ -90,13 +91,13 @@ export class ChangeRecordStream {
 
   /**
    * Resume the stream from a given timestamp
-   * @param  {Number} timestamp The timestamp to resume from
+   * @param  {Number} timestamp The timestamp to resume from, optional
    */
   resume(timestamp) {
     this.pause();
     this.editor.setOption('readOnly', true);
     this.playing = true;
-    let index = this.reset(timestamp);
+    let index = this.reset(timestamp || this.lastCoveredTimeStamp);
     this._applyBatchedChangesWithRAF(this.changeSets.slice(index + 1, this.changeSets.length));
   }
 
@@ -212,9 +213,6 @@ export class ChangeRecordStream {
   }
 
   _applySingleChange(obj) {
-    if (!this.playing) {
-      return;
-    }
     const cm = this.editor;
     let ch = obj.change;
     switch (ch.origin) {

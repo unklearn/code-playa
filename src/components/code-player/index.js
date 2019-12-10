@@ -4,6 +4,7 @@ import {UnControlled as CodeMirror} from 'react-codemirror2';
 import BaseComponent from 'shared/BaseComponent';
 import { ChangeRecordStream } from './ApplyChanges';
 import ControlBar from './ControlBar';
+import { ReactComponent as CodePlayaLogo } from '../../assets/codeplaya_black.svg';
 import 'codemirror/lib/codemirror.css';
 import 'assets/monokai.css';
 
@@ -27,6 +28,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 			theme: 'monokai',
 			playState: 'paused',
 			progress: 0,
+			initialized: false,
 			initialValue: props.initialValue,
 			changeSets: props.changeSets
 		};
@@ -107,12 +109,13 @@ export class CodeMirrorPlayer extends BaseComponent {
 		const {
 			theme,
 			mode,
+			initialized,
 			playState,
 			progress,
 			initialValue
 		} = this.state;
 		return (
-			<div>
+			<div className='unk-code-playa'>
 				<CodeMirror
 					editorDidMount={this.initEditor}
 					value={initialValue}
@@ -123,7 +126,10 @@ export class CodeMirrorPlayer extends BaseComponent {
 						theme
 					}}
 				/>
-				<ControlBar 
+				{!initialized && <div className='unk-code-playa__logo' onClick={() => this.setState({ initialized: true })}>
+					<CodePlayaLogo/>
+				</div>}
+				{initialized && <ControlBar 
 					options={{
 						mode
 					}}
@@ -132,7 +138,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 					setProgress={this.setProgress}
 					setOption={this.setOption}
 					onPlayChange={this.replay}
-				/>
+				/>}
 			</div>
 		);
 	}
@@ -141,15 +147,17 @@ export class CodeMirrorPlayer extends BaseComponent {
 		let {
 			changeSets
 		} = this.state;
+		const end = changeSets[changeSets.length - 1].time;
+		const start = changeSets[0].time;
+		if (this.state.playState === 'playing') {
+			this.stream.pause();
+			this.stream.reset((end - start) * progress + start);
+		} else {
+			this.stream.reset((end - start) * progress + start);
+		}
 		this.setState({
 			progress
 		});
-		if (this.state.playState === 'playing') {
-			const end = changeSets[changeSets.length - 1].time;
-			const start = changeSets[0].time;
-			this.stream.pause();
-			this.stream.reset((end - start) * progress + start);
-		}
 	}
 
 	setOption({ key, value, directory } = {}) {
@@ -173,11 +181,15 @@ export class CodeMirrorPlayer extends BaseComponent {
 	async replay(state) {
 		this.state.playState = state;
 		if (state === 'playing') {
-			this.instance.setValue(this.state.initialValue || '');
-			this.stream = new ChangeRecordStream(this.instance, { speed: 2, initialValue : this.state.initialValue });
-			this.stream.apply(this.state.changeSets);
-			this.stream.play();
-			this.progressListener = this.stream.on('progress', (progress) => this.setState({ progress }));
+			if (!this.stream) {
+				this.instance.setValue(this.state.initialValue || '');
+				this.stream = new ChangeRecordStream(this.instance, { speed: 2, initialValue : this.state.initialValue });
+				this.stream.apply(this.state.changeSets);
+				this.stream.play();
+				this.progressListener = this.stream.on('progress', (progress) => this.setState({ progress }));
+			} else {
+				this.stream.resume();
+			}
 		} else {
 			if (this.stream) {
 				this.stream.pause();
