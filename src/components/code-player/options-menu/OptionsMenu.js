@@ -23,10 +23,23 @@ function makeLanguageMenuItem(object) {
 	}
 }
 
+function makeSpeedComponents() {
+	return [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2].map((d) => {
+		return {
+			component: `${d}x`,
+			key: 'speed',
+			value: d
+		};
+	});
+}
+
 const menu = {
 	items: [{
 		component: (<span>Language</span>),
 		items: MODES.map((mode) => makeLanguageMenuItem(mode))
+	}, {
+		component: (<span>Speed</span>),
+		items: makeSpeedComponents()
 	}]
 };
 

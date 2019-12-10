@@ -28,6 +28,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 			theme: 'monokai',
 			playState: 'paused',
 			progress: 0,
+			speed: 1,
 			initialized: false,
 			initialValue: props.initialValue,
 			changeSets: props.changeSets
@@ -163,6 +164,15 @@ export class CodeMirrorPlayer extends BaseComponent {
 	setOption({ key, value, directory } = {}) {
 		if (key === 'mode') {
 			this.setMode(directory, value);
+		} else if (key === 'speed') {
+			if (this.stream) {
+				this.stream.pause();
+				this.stream.options.speed = value;
+			}
+			this.setState({
+				speed: value,
+				playState: 'paused'
+			});
 		}
 	}
 
@@ -183,7 +193,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 		if (state === 'playing') {
 			if (!this.stream) {
 				this.instance.setValue(this.state.initialValue || '');
-				this.stream = new ChangeRecordStream(this.instance, { speed: 2, initialValue : this.state.initialValue });
+				this.stream = new ChangeRecordStream(this.instance, { speed: this.state.speed, initialValue : this.state.initialValue });
 				this.stream.apply(this.state.changeSets);
 				this.stream.play();
 				this.progressListener = this.stream.on('progress', (progress) => this.setState({ progress }));
