@@ -1,9 +1,9 @@
 .unk-code-playa-progress-bar {
-	height: 2px;
-  width: 100%;
+	height: 3px;
   background: #d6d6d6;
   position: relative;
-  box-sizing: border-box;
+  border: 1px solid #212121;
+  cursor: pointer;
 }
 
 .unk-code-playa-progress-bar:hover {
@@ -11,8 +11,8 @@
 }
 
 .unk-code-playa-progress-bar__handle {
-	width: 10px;
-	height: 10px;
+	width: 12px;
+	height: 12px;
 	border-radius: 50%;
 	display: inline-block;
 	position: absolute;
@@ -22,9 +22,24 @@
 	cursor: pointer;
 	transition: 0.1s background linear;
 	transition: 0.1s border-color linear;
-	top: -7px;
+	transition: 0.05s left ease;
+	top: -6px;
+	transform: scale(0.8);
+	z-index: 5;
+	margin-left: -10px;
 }
 
 .unk-code-playa-progress-bar__handle:hover {
-	border-color: #4a92ff;
+	transform: scale(1);
+	background: #ffffff;
+	border-color: #e60000;
+}
+
+.unk-code-playa-progress-bar__progress-handle {
+	background: #e60000;
+	height: 3px;
+	display: inline-block;
+	position: absolute;
+	top: 0px;
+	width: 0%;
 }

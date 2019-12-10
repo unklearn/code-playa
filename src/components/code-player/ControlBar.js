@@ -2,6 +2,7 @@ import React from 'react';
 import PlayButton from './play-button/PlayButton';
 import ProgressBar from './progress-bar';
 import BaseComponent from 'shared/BaseComponent';
+import { OptionsMenu } from './options-menu';
 import './ControlBar.css';
 
 export default class ControlBar extends BaseComponent {
@@ -13,9 +14,24 @@ export default class ControlBar extends BaseComponent {
 						Play / Pause button
 					 */
 				}
-				<ProgressBar/>
-				<PlayButton/>
-
+				<ProgressBar
+					progress={this.props.progress}
+					setProgress={this.props.setProgress}
+				/>
+				<div className='unk-code-playa-control-bar__row'>
+					<div className='unk-code-playa-control-bar__cell unk-code-playa-control-bar__cell--left'>
+						<PlayButton
+							playState={this.props.playState}
+							onClick={this.props.onPlayChange}
+						/>
+					</div>
+					<div className='unk-code-playa-control-bar__cell unk-code-playa-control-bar__cell--right'>
+						<OptionsMenu
+							options={this.props.options}
+							setOption={this.props.setOption}
+						/>
+					</div>
+				</div>
 			</div>
 		);
 	}

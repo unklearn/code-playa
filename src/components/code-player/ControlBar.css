@@ -1,5 +1,25 @@
 .unk-code-playa-control-bar {
 	background: #212121;
 	height: 40px;
-  padding: 2px;
+}
+
+.unk-code-playa-control-bar__row {
+	display: table;
+	width: 100%;
+}
+
+.unk-code-playa-control-bar__cell {
+	display: table-cell;
+	vertical-align: middle;
+}
+
+.unk-code-playa-control-bar__cell--left {
+	width: 50%;
+	text-align: left;
+}
+
+.unk-code-playa-control-bar__cell--right {
+	width: 50%;
+	text-align: right;
+	padding: 0px 15px;
 }

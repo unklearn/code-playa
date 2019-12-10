@@ -2,10 +2,10 @@ import React from 'react';
 
 import {UnControlled as CodeMirror} from 'react-codemirror2';
 import BaseComponent from 'shared/BaseComponent';
-import { applyBatchedChangesWithRAF } from './ApplyChanges';
+import { ChangeRecordStream } from './ApplyChanges';
 import ControlBar from './ControlBar';
 import 'codemirror/lib/codemirror.css';
-import 'codemirror/theme/mdn-like.css';
+import 'assets/monokai.css';
 
 export class CodeMirrorPlayer extends BaseComponent {
 	// *********************************************************
@@ -23,10 +23,15 @@ export class CodeMirrorPlayer extends BaseComponent {
 		// Underlying CodeMirror instance
 		this.instance = null;
 		this.state = {
+			mode: 'text/x-go',
+			theme: 'monokai',
+			playState: 'paused',
+			progress: 0,
 			initialValue: props.initialValue,
 			changeSets: props.changeSets
 		};
 		this.autoBind();
+		this.setMode('go/go', 'text/x-go');
 	}
 
 	/**
@@ -38,6 +43,9 @@ export class CodeMirrorPlayer extends BaseComponent {
 		if (this.props.editing) {
 			// Setup event listeners and record changesets
 			cm.on("beforeSelectionChange", (editor, selection) => {
+				if (this.state.playState === 'playing') {
+					return;
+				}
 				// Get first range from selection
 				let range = selection.ranges[0];
 				if (!range || !range.anchor || !range.head) {
@@ -54,6 +62,9 @@ export class CodeMirrorPlayer extends BaseComponent {
 
 			// Store series of changes
 			cm.on("changes", (cm, changes) => {
+				if (this.state.playState === 'playing') {
+					return;
+				}
 				changes.forEach((change) => {
 					this.addChange(change);
 			  });
@@ -93,40 +104,87 @@ export class CodeMirrorPlayer extends BaseComponent {
 	// React methods
 	// *********************************************************
 	render() {
+		const {
+			theme,
+			mode,
+			playState,
+			progress,
+			initialValue
+		} = this.state;
 		return (
 			<div>
-				{/*<CodeMirror
+				<CodeMirror
 					editorDidMount={this.initEditor}
-					value={this.state.initialValue}
+					value={initialValue}
 					options={{
 						indentUnit: 4,
 						lineNumbers: true,
-						theme: 'mdn-like'
+						mode,
+						theme
 					}}
-				/>*/}
-				<ControlBar/>
-				<button onClick={this.og}>
-					Ok
-				</button>
+				/>
+				<ControlBar 
+					options={{
+						mode
+					}}
+					progress={progress}
+					playState={playState}
+					setProgress={this.setProgress}
+					setOption={this.setOption}
+					onPlayChange={this.replay}
+				/>
 			</div>
 		);
 	}
 
-	async og() {
-		// import('codemirror/mode/javascript/javascript').then(() => {
-		// 	this.instance.setOption('mode', 'javascript');
-		// });
-		await import('codemirror/mode/go/go').then(() => {
-			this.instance.setOption('mode', 'text/x-go');
+	setProgress(progress) {
+		let {
+			changeSets
+		} = this.state;
+		this.setState({
+			progress
 		});
-		this.instance.setOption('readOnly', true);
-		this.instance.setValue(this.state.initialValue || '');
-		this.playing = true;
-		applyBatchedChangesWithRAF(this.instance, this.state.changeSets, 10, () => {
-			this.state.initialValue = this.instance.getValue();
-			this.instance.setOption('readOnly', false);
-			this.state.changeSets = [];
-			this.playing = false;
+		if (this.state.playState === 'playing') {
+			const end = changeSets[changeSets.length - 1].time;
+			const start = changeSets[0].time;
+			this.stream.pause();
+			this.stream.reset((end - start) * progress + start);
+		}
+	}
+
+	setOption({ key, value, directory } = {}) {
+		if (key === 'mode') {
+			this.setMode(directory, value);
+		}
+	}
+
+	async setMode(directory, mode) {
+		await import(`codemirror/mode/${directory}`).then(() => {
+			this.setState({
+				mode
+			}, () => {
+				if (this.instance) {
+					this.instance.setOption('mode', mode);
+				}
+			});
 		});
+	}
+
+	async replay(state) {
+		this.state.playState = state;
+		if (state === 'playing') {
+			this.instance.setValue(this.state.initialValue || '');
+			this.stream = new ChangeRecordStream(this.instance, { speed: 2, initialValue : this.state.initialValue });
+			this.stream.apply(this.state.changeSets);
+			this.stream.play();
+			this.progressListener = this.stream.on('progress', (progress) => this.setState({ progress }));
+		} else {
+			if (this.stream) {
+				this.stream.pause();
+			}
+			// this.state.initialValue = this.instance.getValue();
+			// this.state.changeSets = [];
+		}
+		this.forceUpdate();
 	}
 }

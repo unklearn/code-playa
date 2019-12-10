@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 export default function DraggableHandle(props) {
 	const [isDragging, setIsDragging] = useState(false);
-	const [pos, setPos] = useState(props.initialPos);
+	const [pos, setPos] = useState(props.progress);
 	const [origin, setOrigin] = useState(null);
 	function startDrag(e) {
 		setIsDragging(true);
@@ -10,18 +10,21 @@ export default function DraggableHandle(props) {
 		const bbox = element.getBoundingClientRect();
 		if (origin === null) {
 			setOrigin({
-				width: bbox.width + 10,
+				width: bbox.width,
 				height: bbox.height,
 				x: e.clientX
 			});
 		}
 	}
 	useEffect(() => {
+		setPos(props.progress);
+	}, [props.progress]);
+	useEffect(() => {
 		function onDrag(e) {
 			if (!isDragging) {
 				return;
 			}
-			setPos(Math.min(Math.max(props.restrictX ? 0 : (e.clientX - origin.x) / (origin.width), 0), 1));
+			setPos(Math.min(Math.max(props.restrictX ? 0.01 : (e.clientX - origin.x) / (origin.width), 0.01), 1));
 		}
 		function endDrag(e) {
 			if (!isDragging) {
@@ -48,12 +51,12 @@ export default function DraggableHandle(props) {
 		<span className='unk-code-playa-progress-bar__handle' 
 			onMouseDown={startDrag}
 			style={{
-				left: 100 * pos + '%'
+				left: 100 * Math.max(pos, 0.005) + '%'
 			}}
 		/>
 	);
 }
 
 DraggableHandle.defaultProps = {
-	initialPos: 0
+	progress: 0
 };
