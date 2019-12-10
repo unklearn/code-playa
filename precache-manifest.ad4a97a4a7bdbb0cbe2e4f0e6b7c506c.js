@@ -1,6 +1,6 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "cec5c76def89ad4ab44e76f687a382f7",
+    "revision": "f6fca5b71fda78cdee322ea3230b0106",
     "url": "/code-playa/index.html"
   },
   {
