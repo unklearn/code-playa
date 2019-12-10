@@ -17,6 +17,7 @@ function App() {
       </Sidebar>
       <main>
         <CodeMirrorPlayer editing/>
+        <p>Click the logo to begin</p>
       </main>
     </div>
   );
