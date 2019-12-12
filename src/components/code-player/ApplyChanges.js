@@ -58,7 +58,6 @@ export class ChangeRecordStream {
    */
   play() {
     this.playing = true;
-    console.log(this.lastCoveredTimeStamp);
     this.resume(this.lastCoveredTimeStamp);
   }
 

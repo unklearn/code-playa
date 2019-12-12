@@ -5,6 +5,7 @@
   "private": true,
   "dependencies": {
     "codemirror": "^5.49.2",
+    "fbemitter": "^2.1.1",
     "gh-pages": "^2.1.1",
     "react": "^16.12.0",
     "react-codemirror2": "^6.0.0",
@@ -33,5 +34,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "worker-loader": "^2.0.0"
   }
 }
