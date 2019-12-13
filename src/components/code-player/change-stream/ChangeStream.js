@@ -1,29 +1,5 @@
 import { EventEmitter } from 'fbemitter';
-
-
-// *********************************************************
-// Utility methods
-// *********************************************************
-
-/**
- * Delay an async task by given time in ms
- * @param  {Number} time Milliseconds to delay the task by
- */
-function delay(time) {
-  return new Promise(resolve => setTimeout(resolve, time));
-}
-
-/**
- * An async version of forEach. Waits for each callback to execute before
- * moving on
- * @param  {Array}   array     The array to process via async forEach
- * @param  {Function} callback The callback function to call
- */
-async function asyncForEach(array, callback) {
-  for (let index = 0; index < array.length; index++) {
-    await callback(array[index], index, array);
-  }
-}
+import { delay, asyncForEach } from './Utils';
 
 export class ChangeStream extends EventEmitter {
 	// *********************************************************
@@ -100,14 +76,23 @@ export class ChangeStream extends EventEmitter {
       }
     }
     // Look for a snapshot, and if we find one, use that.
-    let snapshotIndex = Math.floor(index / 10);
-    if (this._snapshots[snapshotIndex]) {
-    	this.editor.setValue(this._snapshots[snapshotIndex]);
-    	index = snapshotIndex * 10;
-    } else {
-    	this.editor.setValue(this._initialValue);
+    let estimatedProgress = this._calculateProgress(index);
+    let snapshotIndex = Math.floor(estimatedProgress * 10);
+    let snapshot = this._snapshots[snapshotIndex];
+    while (!snapshot && snapshotIndex > 0) {
+      snapshot = this._snapshots[snapshotIndex];
+      snapshotIndex--;
     }
-   	this._applyBatchedChangesWithRAF(this._cs.slice(0, index), false);
+    if (snapshot) {
+      this._editor.setValue(snapshot.v);
+      // The last frame is the time point at which snapshot resides
+      this._lastFrame = this._cs[snapshot.i].time;
+      this._applyBatchedChangesWithRAF(this._cs.slice(snapshot.i + 1, index + 1), false);
+    } else {
+      this._editor.setValue(this._initialValue);
+      this._lastFrame = this._cs[0].time;
+      this._applyBatchedChangesWithRAF(this._cs.slice(0, index + 1), false);
+    }
     return index;
   }
 
@@ -141,7 +126,7 @@ export class ChangeStream extends EventEmitter {
   	if (this._isPlaying) {
   		this.pause();
   	}
-  	this.options.speed = speed;
+  	this._options.speed = speed;
   }
 
   // *********************************************************
@@ -187,15 +172,23 @@ export class ChangeStream extends EventEmitter {
       }
       let ch = changeSet.change;
       let indent = ch.text ? (ch.text.indexOf(' ') > -1) : false;
-      this.editor.applyChange(changeSet);
+      this._editor.applyChange(changeSet);
 
       // If we have an indent operation, we make it feel "instant".
-      let timeDelay = indent ? 0 : (Math.min(slice[i + 1].time - slice[i].time, maxFrameDelay) / speed);
+      let timeDelay;
+      if (slice[i + 1]) {
+        timeDelay = indent ? 0 : (Math.min(slice[i + 1].time - slice[i].time, maxFrameDelay) / speed);
+      } else {
+        timeDelay = 0;
+      }
       // Emit event that allows handle controls to schedule it's own animation
       const progress = this._calculateProgress();
       // Record snapshots so that we can re-start from a snapshot point.
       if (Math.floor(progress * 10) === this._snapshots.length) {
-      	this._snapshots.push(this._editor.getValue());
+      	this._snapshots[Math.floor(progress * 10)] = {
+          i,
+          v: this._editor.getValue()
+        };
       }
       // Emit the progress
       this._emitProgress(progress, timeDelay);
@@ -214,6 +207,7 @@ export class ChangeStream extends EventEmitter {
         await this._applyBatchedChangesWithRAF(changeSets);
       });
     } else {
+      this._emitProgress(this._calculateProgress(), 0);
       this.emit('done');
     }
   }

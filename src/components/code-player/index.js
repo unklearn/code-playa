@@ -2,8 +2,10 @@ import React from 'react';
 
 import {UnControlled as CodeMirror} from 'react-codemirror2';
 import BaseComponent from 'shared/BaseComponent';
-import { ChangeRecordStream } from './ApplyChanges';
+// import { ChangeRecordStream } from './ApplyChanges';
 import ControlBar from './ControlBar';
+import { ChangeStream } from './change-stream';
+import CodeMirrorEditorWrapper from './CodeMirrorEditorWrapper';
 import { ReactComponent as CodePlayaLogo } from '../../assets/codeplaya_black.svg';
 import 'codemirror/lib/codemirror.css';
 import 'assets/monokai.css';
@@ -117,7 +119,12 @@ export class CodeMirrorPlayer extends BaseComponent {
 		} = this.state;
 		return (
 			<div className='unk-code-playa'>
-				<CodeMirror
+				<div style={{
+					background: '#1d1d1d',
+					height: 300,
+					pointerEvents: initialized ? 'all' : 'none'
+				}}>
+				{initialized && <CodeMirror
 					editorDidMount={this.initEditor}
 					value={initialValue}
 					options={{
@@ -126,7 +133,8 @@ export class CodeMirrorPlayer extends BaseComponent {
 						mode,
 						theme
 					}}
-				/>
+				/>}
+				</div>
 				{!initialized && <div className='unk-code-playa__logo' onClick={() => this.setState({ initialized: true })}>
 					<CodePlayaLogo/>
 				</div>}
@@ -138,7 +146,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 					playState={playState}
 					setProgress={this.setProgress}
 					setOption={this.setOption}
-					onPlayChange={this.replay}
+					onPlayChange={this.handlePlay}
 				/>}
 			</div>
 		);
@@ -146,15 +154,16 @@ export class CodeMirrorPlayer extends BaseComponent {
 
 	setProgress(progress) {
 		let {
-			changeSets
+			changeSets,
+			stream
 		} = this.state;
 		const end = changeSets[changeSets.length - 1].time;
 		const start = changeSets[0].time;
 		if (this.state.playState === 'playing') {
-			this.stream.pause();
-			this.stream.reset((end - start) * progress + start);
+			stream.pause();
+			stream.reset((end - start) * progress + start);
 		} else {
-			this.stream.reset((end - start) * progress + start);
+			stream.reset((end - start) * progress + start);
 		}
 		this.setState({
 			progress
@@ -166,8 +175,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 			this.setMode(directory, value);
 		} else if (key === 'speed') {
 			if (this.stream) {
-				this.stream.pause();
-				this.stream.options.speed = value;
+				this.state.stream.setSpeed(value);
 			}
 			this.setState({
 				speed: value,
@@ -188,25 +196,67 @@ export class CodeMirrorPlayer extends BaseComponent {
 		});
 	}
 
-	async replay(state) {
-		this.state.playState = state;
-		if (state === 'playing') {
-			if (!this.stream) {
-				this.instance.setValue(this.state.initialValue || '');
-				this.stream = new ChangeRecordStream(this.instance, { speed: this.state.speed, initialValue : this.state.initialValue });
-				this.stream.apply(this.state.changeSets);
-				this.stream.play();
-				this.progressListener = this.stream.on('progress', (progress) => this.setState({ progress }));
-			} else {
-				this.stream.resume();
+	async loadStream() {
+		const {
+			isPlaybackMode,
+			streamSource,
+			initialValue,
+			changeSets,
+			speed
+		}	= this.state;
+		let stream = new ChangeStream(
+			new CodeMirrorEditorWrapper(this.instance),
+			{
+				speed
 			}
+		);
+		// Setup event listeners for play/pause && progress
+		stream.addListener('progress', (p) => {
+			this.setState({
+				progress: p
+			});
+		});
+		stream.addListener('playing', () => {
+			this.setState({
+				playState: 'playing'
+			});
+		});
+		stream.addListener('paused', () => {
+			this.setState({
+				playState: 'paused'
+			});
+		});
+		if (isPlaybackMode) {
+			// Load stream off source (synchronous for now), we will use a JSON source
+			let { i, cs } = JSON.parse(streamSource);
+			this.setState({
+				initialValue: i,
+				changeSets: cs
+			});
+			stream.apply(i, cs);
 		} else {
-			if (this.stream) {
-				this.stream.pause();
-			}
-			// this.state.initialValue = this.instance.getValue();
-			// this.state.changeSets = [];
+			stream.apply(initialValue, changeSets);
 		}
-		this.forceUpdate();
+		return stream;
+	}
+
+	async handlePlay(state) {
+		// Check if we have a stream available ? Even if it is loading.
+		let {
+			stream
+		} = this.state;
+		if (!stream) {
+			// Create a new stream, or wait for it to load (if we are playing a local/remote stream)
+			stream = await this.loadStream();
+		}
+		if (state === 'playing') {
+			stream.play();
+		} else {
+			stream.pause();
+		}
+		this.setState({
+			playState: state,
+			stream
+		});
 	}
 }
