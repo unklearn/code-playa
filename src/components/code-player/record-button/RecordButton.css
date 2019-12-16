@@ -1,0 +1,7 @@
+.unk-code-playa-record-btn {
+    display: inline-block;
+}
+
+.unk-code-playa-record-btn:hover {
+    transform: scale(1.2);
+}

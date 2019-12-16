@@ -1,0 +1,31 @@
+.unk-code-playa-recordings-list {
+    list-style: none;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: white;
+    margin: 0px;
+    z-index: 10;
+    padding: 0;
+    background: #ffffff;
+    border-radius: 5px;
+    padding: 0px 5px;
+}
+
+.unk-code-playa-recording {
+    font-size: 12px;
+    margin: 3px 0px;
+}
+
+.unk-code-playa-recording__label {
+    color: #222222;
+    border-right: 2px solid #212121;
+    padding: 2px;
+}
+
+.unk-code-playa-recording__action {
+    margin: 0px 2px;
+    padding: 0px 3px;
+    cursor: pointer;
+    color: #e60000;
+}

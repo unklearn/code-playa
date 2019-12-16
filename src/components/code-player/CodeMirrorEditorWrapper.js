@@ -1,7 +1,10 @@
 export default class CodeMirrorEditorWrapper {
-	constructor(cm) {
-		this._cm = cm;
-	}
+	constructor(cm, addChangeCb) {
+    this._cm = cm;
+    this._addChangeCb = addChangeCb;
+    this._addListeners();
+    this._frozen = false;
+  }
 
 	setValue(value) {
 		this._cm.setValue(value);
@@ -32,10 +35,52 @@ export default class CodeMirrorEditorWrapper {
         break;
     }
   }
+
+  freeze() {
+    this._frozen = true;
+    this._cm.setOption('readOnly', true);
+  }
+
+  unfreeze() {
+    this._frozen = false;
+    this._cm.setOption('readOnly', false);
+  }
   
   // *********************************************************
   // Private methods
   // *********************************************************
+  _addListeners() {
+    let cm = this._cm;
+    // Setup event listeners and record changesets
+    cm.on("beforeSelectionChange", (editor, selection) => {
+      if (this._frozen) {
+        return;
+      }
+      // Get first range from selection
+      let range = selection.ranges[0];
+      if (!range || !range.anchor || !range.head) {
+        return;
+      }
+      if (range.anchor.line === range.head.line && range.anchor.ch === range.head.ch) {
+        return;
+      }
+      this._addChangeCb({
+        origin: "+select",
+        range: range
+      });
+    });
+
+    // Store series of changes
+    cm.on("changes", (cm, changes) => {
+      if (this._frozen) {
+        return;
+      }
+      changes.forEach((change) => {
+        this._addChangeCb(change);
+      });
+    });
+  }
+  
   /**
    * Insert given text inside codemirror editor
    * @param  {CodeMirror} editor         Codemirror editor

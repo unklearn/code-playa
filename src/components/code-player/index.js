@@ -6,6 +6,7 @@ import BaseComponent from 'shared/BaseComponent';
 import ControlBar from './ControlBar';
 import { ChangeStream } from './change-stream';
 import CodeMirrorEditorWrapper from './CodeMirrorEditorWrapper';
+import { RecordingsList } from './recordings-list';
 import { ReactComponent as CodePlayaLogo } from '../../assets/codeplaya_black.svg';
 import 'codemirror/lib/codemirror.css';
 import 'assets/monokai.css';
@@ -32,6 +33,8 @@ export class CodeMirrorPlayer extends BaseComponent {
 			progress: 0,
 			speed: 1,
 			initialized: false,
+			recordings: [],
+			currentRecordingIndex: 0,
 			initialValue: props.initialValue,
 			changeSets: props.changeSets
 		};
@@ -45,40 +48,28 @@ export class CodeMirrorPlayer extends BaseComponent {
 	 */
 	initEditor(cm) {
 		this.instance = cm;
-		if (this.props.editing) {
-			// Setup event listeners and record changesets
-			cm.on("beforeSelectionChange", (editor, selection) => {
-				if (this.state.playState === 'playing') {
-					return;
-				}
-				// Get first range from selection
-				let range = selection.ranges[0];
-				if (!range || !range.anchor || !range.head) {
-					return;
-				}
-			  if (range.anchor.line === range.head.line && range.anchor.ch === range.head.ch) {
-					return;
-			  }
-			  this.addChange({
-		    	origin: "+select",
-		      range: range
-		    });
-			});
-
-			// Store series of changes
-			cm.on("changes", (cm, changes) => {
-				if (this.state.playState === 'playing') {
-					return;
-				}
-				changes.forEach((change) => {
-					this.addChange(change);
-			  });
-			});
-		}
+		let editor = new CodeMirrorEditorWrapper(this.instance, this.addChange)
+		this.setState({
+			editor
+		});
 	}
 
 	componentDidUpdate(prevProps) {
 		
+	}
+
+	componentWillUnmount() {
+		const {
+			stream
+		} = this.state;
+		if (stream) {
+			// Switch off listeners
+			stream.off('progress');
+			stream.off('playing');
+			stream.off('paused');
+			// CM instance GC
+			stream = null;
+		}
 	}
 
 	/**
@@ -115,6 +106,9 @@ export class CodeMirrorPlayer extends BaseComponent {
 			initialized,
 			playState,
 			progress,
+			changeSets,
+			recordState,
+			recordings,
 			initialValue
 		} = this.state;
 		return (
@@ -135,6 +129,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 					}}
 				/>}
 				</div>
+				<RecordingsList recordings={recordings} handleRecordingAction={this.handleRecordingAction}/>
 				{!initialized && <div className='unk-code-playa__logo' onClick={() => this.setState({ initialized: true })}>
 					<CodePlayaLogo/>
 				</div>}
@@ -142,6 +137,9 @@ export class CodeMirrorPlayer extends BaseComponent {
 					options={{
 						mode
 					}}
+					changeSetCount={changeSets.length}
+					toggleRecordState={this.toggleRecordState}
+					recordState={recordState}
 					progress={progress}
 					playState={playState}
 					setProgress={this.setProgress}
@@ -150,6 +148,50 @@ export class CodeMirrorPlayer extends BaseComponent {
 				/>}
 			</div>
 		);
+	}
+	
+	toggleRecordState() {
+		let {
+			recordState,
+			recordings,
+			initialValue,
+			editor,
+			changeSets,
+			currentRecordingIndex
+		} = this.state;
+		if (recordState === 'recording') {
+			recordings.push({
+				initialValue,
+				changeSets
+			});
+			currentRecordingIndex = recordings.length - 1;
+		} else {
+			initialValue = editor.getValue();
+			changeSets = [];
+		}
+		this.setState({
+			recordState: this.state.recordState === 'recording' ? 'stop' : 'recording',
+			currentRecordingIndex,
+			recordings,
+			initialValue,
+			changeSets
+		});
+	}
+
+	handleRecordingAction({ initialValue, changeSets }, action, index) {
+		if (action === 'run') {
+			this.setState({
+				initialValue,
+				currentRecordingIndex: index,
+				changeSets,
+				stream: null
+			}, () => {
+				this.state.editor.setValue(initialValue);
+				this.handlePlay('playing');
+			});
+		} else if (action === 'compress') {
+			console.log(changeSets);
+		}
 	}
 
 	setProgress(progress) {
@@ -202,10 +244,14 @@ export class CodeMirrorPlayer extends BaseComponent {
 			streamSource,
 			initialValue,
 			changeSets,
-			speed
+			speed,
+			editor
 		}	= this.state;
+		// Freeze changes unless user unlocks it.
+		editor.freeze();
+		// Create new change stream
 		let stream = new ChangeStream(
-			new CodeMirrorEditorWrapper(this.instance),
+			editor,
 			{
 				speed
 			}

@@ -83,16 +83,21 @@ export class ChangeStream extends EventEmitter {
       snapshot = this._snapshots[snapshotIndex];
       snapshotIndex--;
     }
+    // We use a sync-reset for now. TODO: Tharun add a async method here and use cb or events or worker
+    // to notify that stream is busy resetting..
     if (snapshot) {
       this._editor.setValue(snapshot.v);
       // The last frame is the time point at which snapshot resides
-      this._lastFrame = this._cs[snapshot.i].time;
-      this._applyBatchedChangesWithRAF(this._cs.slice(snapshot.i + 1, index + 1), false);
+      this._cs.slice(snapshot.i + 1, index + 1).forEach((ch) => {
+        this._editor.applyChange(ch);
+      });
     } else {
       this._editor.setValue(this._initialValue);
-      this._lastFrame = this._cs[0].time;
-      this._applyBatchedChangesWithRAF(this._cs.slice(0, index + 1), false);
+      this._cs.slice(0, index + 1).forEach((ch) => {
+        this._editor.applyChange(ch);
+      });
     }
+    this._lastFrame = this._cs[index].time;
     return index;
   }
 
