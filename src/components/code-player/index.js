@@ -4,7 +4,7 @@ import {UnControlled as CodeMirror} from 'react-codemirror2';
 import BaseComponent from 'shared/BaseComponent';
 // import { ChangeRecordStream } from './ApplyChanges';
 import ControlBar from './ControlBar';
-import { ChangeStream } from './change-stream';
+import { ChangeStream, compressStream } from './change-stream';
 import CodeMirrorEditorWrapper from './CodeMirrorEditorWrapper';
 import { RecordingsList } from './recordings-list';
 import { ReactComponent as CodePlayaLogo } from '../../assets/codeplaya_black.svg';
@@ -190,7 +190,13 @@ export class CodeMirrorPlayer extends BaseComponent {
 				this.handlePlay('playing');
 			});
 		} else if (action === 'compress') {
-			console.log(changeSets);
+			let compressed = compressStream(changeSets, 1);
+			this.setState({
+				changeSets: compressed
+			});
+			if (this.state.stream) {
+				this.state.stream.apply(initialValue, compressed);
+			}
 		}
 	}
 
