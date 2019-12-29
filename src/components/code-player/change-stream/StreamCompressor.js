@@ -39,12 +39,26 @@ export function compressStream(changeSets, compressionLevel = 1) {
     }
 };
 
+function safeEqualityCompare(obj1, obj2, keyPath) {
+    const len = keyPath.length;
+    for (let i = 0; i < len; i++) {
+        const key = keyPath[i];
+        if (obj1 !== undefined && obj2 !== undefined && obj1.hasOwnProperty(key) && obj2.hasOwnProperty(key)) {
+            obj1 = obj1[key];
+            obj2 = obj2[key];
+        } else {
+            return false;
+        }
+    }
+    return obj1 === obj2;
+}
+
 function *SameOpGenerator(changeSets) {
     let i = 1;
     let len = changeSets.length;
     let same = [changeSets[0]];
     while (i < len) {
-        if (changeSets[i].change && changeSets[i - 1].change && changeSets[i].change.origin === changeSets[i - 1].change.origin) {
+        if (safeEqualityCompare(changeSets[i], changeSets[i - 1], ['change', 'origin'])) {
             same.push(changeSets[i]);
         } else {
             yield same;
@@ -60,11 +74,18 @@ function *SameLineGenerator(changeSets) {
     let len = changeSets.length;
     if (len < 2) {
         yield changeSets;
+        return;
     }
     let same = [changeSets[0]];
     while (i < len) {
         // Ducktype using `.change`
-        if (changeSets[i - 1].change && changeSets[i].change && changeSets[i - 1].change.from && changeSets[i].change.from && changeSets[i - 1].change.from.line === changeSets[i].change.from.line) {
+        // For input + delete operations, line is present on `change.from` key
+        // For select, operations, we have to check if anchor is same, and head is on same line
+        // or if head is same, and anchor is on same line
+        if (safeEqualityCompare(changeSets[i - 1], changeSets[i], ['change', 'from' , 'line'])) {
+            same.push(changeSets[i]);
+        } else if (safeEqualityCompare(changeSets[i - 1], changeSets[i], ['change', 'range' , 'head', 'line']) || safeEqualityCompare(changeSets[i - 1], changeSets[i], ['change', 'range' , 'anchor', 'line'])) {
+            // Head or anchor is the same, this means we can merge `select` and other operations that rely on range
             same.push(changeSets[i]);
         } else {
             yield same;
@@ -75,9 +96,21 @@ function *SameLineGenerator(changeSets) {
     yield same;
 }
 
+function isAdjacentSelect(obj1, obj2) {
+    // Case 1, same head, different anchor
+    // Case 2, same anchor, different head
+    if (safeEqualityCompare(obj1, obj2, ['change', 'range', 'head', 'line']) && safeEqualityCompare(obj1, obj2, ['change', 'range', 'head', 'ch'])) {
+        return true;
+    } else if (safeEqualityCompare(obj1, obj2, ['change', 'range', 'anchor', 'line']) && safeEqualityCompare(obj1, obj2, ['change', 'range', 'anchor', 'ch'])) {
+        return true;
+    }
+    return false;
+}
+
 function *AdjacentRangeGenerator(changeSets) {
     if (changeSets.length < 2) {
-        return changeSets;
+        yield changeSets;
+        return;
     }
     let same = [changeSets[0]];
     for (let i = 1; i < changeSets.length; i++) {
@@ -86,12 +119,86 @@ function *AdjacentRangeGenerator(changeSets) {
             same.push(changeSets[i]);
         } else if (changeSets[i].change.origin === '+delete' && Math.abs(changeSets[i].change.from.ch - changeSets[i - 1].change.from.ch) === 1) {
             same.push(changeSets[i]);
+        } else if (changeSets[i].change.origin === '+select' && isAdjacentSelect(changeSets[i - 1], changeSets[i])) {
+            same.push(changeSets[i]);
         } else {
             yield same;
             same = [changeSets[i]];
         }
     }
     yield same;
+}
+
+/**
+ * Combine adjacent change sets for input op
+ * @param {Array} adjacentChangeSets
+ */
+function combineInputOps(adjacentChangeSets) {
+    const adjsLen = adjacentChangeSets.length - 1;
+    return {
+        ...adjacentChangeSets[0],
+        change: {
+            origin: '+input',
+            text: [adjacentChangeSets.map((a) => a.change.text.join('\n')).join('')],
+            from: {
+                line: adjacentChangeSets[0].change.from.line,
+                ch: adjacentChangeSets[0].change.from.ch
+            },
+            to: {
+                line: adjacentChangeSets[adjsLen].change.from.line,
+                ch: adjacentChangeSets[adjsLen].change.to.ch
+            }
+        }
+    };
+}
+
+/**
+ * Combine adjacent change sets for delete op
+ * @param {Array} adjacentChangeSets
+ */
+function combineDeleteOps(adjacentChangeSets) {
+    const adjsLen = adjacentChangeSets.length - 1;
+    return {
+        ...adjacentChangeSets[0],
+        change: {
+            origin: '+delete',
+            to: {
+                line: adjacentChangeSets[0].change.to.line,
+                ch: adjacentChangeSets[0].change.to.ch,
+                sticky: adjacentChangeSets[0].change.to.sticky
+            },
+            from: {
+                line: adjacentChangeSets[adjsLen].change.from.line,
+                ch: adjacentChangeSets[adjsLen].change.from.ch,
+                sticky: adjacentChangeSets[adjsLen].change.from.sticky
+            }
+        }
+    };
+}
+
+/**
+ * Combine selections with same anchor or head
+ * 
+ * @param {Array} adjacentChangeSets
+ */
+function combineSelectOps(adjacentChangeSets) {
+    const adjsLen = adjacentChangeSets.length - 1;
+    return {
+        ...adjacentChangeSets[0],
+        change: {
+            origin: '+select',
+            range: {
+                head: {
+                    line: adjacentChangeSets[adjsLen].change.range.head.line,
+                    ch: adjacentChangeSets[adjsLen].change.range.head.ch
+                },
+                anchor: {
+                    line: adjacentChangeSets[0].change.range.anchor.line,
+                    ch: adjacentChangeSets[0].change.range.anchor.ch
+                }
+            }
+        }
+    };
 }
 
 /**
@@ -111,40 +218,12 @@ function mergeAdjacentOps(changeSets) {
                 } else {
                     for (let adjs of AdjacentRangeGenerator(sameLines)) {
                         let op = adjs[0].change.origin;
-                        let adjsLen = adjs.length - 1;
                         if (op === '+input') {
-                            compressedChangeSets.push({
-                                ...adjs[0],
-                                change: {
-                                    origin: '+input',
-                                    text: [adjs.map((a) => a.change.text.join('')).join('')],
-                                    from: {
-                                        line: adjs[0].change.from.line,
-                                        ch: adjs[0].change.from.ch
-                                    },
-                                    to: {
-                                        line: adjs[adjsLen].change.from.line,
-                                        ch: adjs[adjsLen].change.to.ch
-                                    }
-                                }
-                            });
+                            compressedChangeSets.push(combineInputOps(adjs));
                         } else if (op === '+delete') {
-                            compressedChangeSets.push({
-                                ...adjs[0],
-                                change: {
-                                    origin: '+delete',
-                                    to: {
-                                        line: adjs[0].change.to.line,
-                                        ch: adjs[0].change.to.ch
-                                    },
-                                    from: {
-                                        line: adjs[adjsLen].change.from.line,
-                                        ch: adjs[adjsLen].change.from.ch
-                                    }
-                                }
-                            });
-                        } else {
-                            console.log(adjs);
+                            compressedChangeSets.push(combineDeleteOps(adjs));
+                        } else if (op === '+select') {
+                            compressedChangeSets.push(combineSelectOps(adjs));
                         }
                     }
                 }

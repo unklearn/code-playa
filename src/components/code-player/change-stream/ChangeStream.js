@@ -190,10 +190,10 @@ export class ChangeStream extends EventEmitter {
       const progress = this._calculateProgress();
       // Record snapshots so that we can re-start from a snapshot point.
       if (Math.floor(progress * 10) === this._snapshots.length) {
-      	this._snapshots[Math.floor(progress * 10)] = {
-          i,
-          v: this._editor.getValue()
-        };
+      	// this._snapshots[Math.floor(progress * 10)] = {
+        //   i,
+        //   v: this._editor.getValue()
+        // };
       }
       // Emit the progress
       this._emitProgress(progress, timeDelay);

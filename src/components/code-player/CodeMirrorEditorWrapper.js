@@ -4,6 +4,7 @@ export default class CodeMirrorEditorWrapper {
     this._addChangeCb = addChangeCb;
     this._addListeners();
     this._frozen = false;
+    window.doc = cm;
   }
 
 	setValue(value) {

@@ -196,6 +196,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 			});
 			if (this.state.stream) {
 				this.state.stream.apply(initialValue, compressed);
+				this.setProgress(0);
 			}
 		}
 	}
