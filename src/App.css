@@ -12,10 +12,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
   justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
 }
+
 
 .App-link {
   color: #09d3ac;
@@ -27,6 +29,11 @@ main {
 }
 
 @media(min-width: 1200px) {
+
+  .App-header {
+    margin-left: calc(20% + 50px);
+    width: calc(80% - 50px);
+  }
   main {
     margin-left: calc(20% + 50px);
   }

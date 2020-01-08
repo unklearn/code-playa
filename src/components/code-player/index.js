@@ -103,6 +103,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 		const {
 			theme,
 			mode,
+			speed,
 			initialized,
 			playState,
 			progress,
@@ -135,7 +136,8 @@ export class CodeMirrorPlayer extends BaseComponent {
 				</div>}
 				{initialized && <ControlBar 
 					options={{
-						mode
+						mode,
+						speed
 					}}
 					changeSetCount={changeSets.length}
 					toggleRecordState={this.toggleRecordState}
