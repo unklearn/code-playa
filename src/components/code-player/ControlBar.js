@@ -21,16 +21,17 @@ export default class ControlBar extends BaseComponent {
 				/>
 				<div className='unk-code-playa-control-bar__row'>
 					<div className='unk-code-playa-control-bar__cell unk-code-playa-control-bar__cell--left'>
-						{this.props.recordState === 'stop' && <PlayButton
+						<PlayButton
 							playState={this.props.playState}
 							onClick={this.props.onPlayChange}
-						/>}
-					</div>
-					<div className='unk-code-playa-control-bar__cell unk-code-playa-control-bar__cell--right'>
+							disabled={this.props.recordState !== 'stop'}
+						/>
 						<RecordButton
 							toggleRecordState={this.props.toggleRecordState}
 							recordState={this.props.recordState}
 						/>
+					</div>
+					<div className='unk-code-playa-control-bar__cell unk-code-playa-control-bar__cell--right'>
 						<OptionsMenu
 							options={this.props.options}
 							setOption={this.props.setOption}

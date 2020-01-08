@@ -9,6 +9,11 @@
   outline: none;
 }
 
+.code-playa-control-bar__button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+}
+
 .code-playa-control-bar__button path {
   fill: #d6d6d6;
 }

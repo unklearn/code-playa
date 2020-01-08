@@ -17,7 +17,7 @@
  * becomes insertCharacter('b'). This step uses a reasonable lookaround window of 5.
  * 
  * Level 3:
- * In addition to Level 3, combine selection + delete into simply delete operations. Merge character sets into entire
+ * In addition to Level 3, remove selection operations, and cross word boundaries.
  * words.
  * 
  * @param {Array} changeSets  Array of change sets 
@@ -30,8 +30,9 @@ export function compressStream(changeSets, compressionLevel = 1) {
         case 1:
         case 2:
         case 3:
-            changeSets = mergeAdjacentOps(changeSets);
-            // changeSets = compressionLevel === 2 ? combineInsertsAndDeletes(changeSets) : changeSets;
+            changeSets = compressionLevel === 2 ? combineInsertsAndDeletes(changeSets) : changeSets;
+            changeSets = mergeAdjacentOps(changeSets, compressionLevel > 1);
+            changeSets = compressionLevel === 3 ? changeSets.filter((ch) => ch.change && ch.change.origin !== '+select') : changeSets;
             // changeSets = compressionLevel === 3 ? combineLargeOpsAndUseWordSets(changeSets) : changeSets;
             return changeSets;
         default:
@@ -53,13 +54,23 @@ function safeEqualityCompare(obj1, obj2, keyPath) {
     return obj1 === obj2;
 }
 
-function *SameOpGenerator(changeSets) {
+function *SameOpGenerator(changeSets, crossWordBoundaries) {
     let i = 1;
     let len = changeSets.length;
     let same = [changeSets[0]];
     while (i < len) {
         if (safeEqualityCompare(changeSets[i], changeSets[i - 1], ['change', 'origin'])) {
-            same.push(changeSets[i]);
+            if (crossWordBoundaries) {
+                same.push(changeSets[i]);
+            } else {
+                // Check if changeset invoves a space or tab or newline
+                if (!/\s|\t|\n/ig.test(changeSets[i].change.text.join(''))) {
+                    same.push(changeSets[i]);
+                } else {
+                    yield same;
+                    same = [changeSets[i]];
+                }
+            }
         } else {
             yield same;
             same = [changeSets[i]];
@@ -139,6 +150,7 @@ function combineInputOps(adjacentChangeSets) {
         ...adjacentChangeSets[0],
         change: {
             origin: '+input',
+            duration: adjacentChangeSets[adjsLen].time - adjacentChangeSets[0].time,
             text: [adjacentChangeSets.map((a) => a.change.text.join('\n')).join('')],
             from: {
                 line: adjacentChangeSets[0].change.from.line,
@@ -203,15 +215,16 @@ function combineSelectOps(adjacentChangeSets) {
 
 /**
  * Merge adjacent operations according to the cursor position
- * @param {Array} changeSets Array of initial changesets 
- * @returns {Array} Array of compressed changesets
+ * @param {Array} changeSets            Array of initial changesets
+ * @param {Boolean} crossWordBoundaries Whether we should cross word boundaries (spaces, tabs while compressing)
+ * @returns {Array}                     Array of compressed changesets
  */
-function mergeAdjacentOps(changeSets) {
+function mergeAdjacentOps(changeSets, crossWordBoundaries = false) {
     if (changeSets.length < 2) {
         return changeSets;
     } else {
         let compressedChangeSets = [];
-        for (let chs of SameOpGenerator(changeSets)) {
+        for (let chs of SameOpGenerator(changeSets, crossWordBoundaries)) {
             for (let sameLines of SameLineGenerator(chs)) {
                 if (sameLines.length < 2) {
                     compressedChangeSets = compressedChangeSets.concat(sameLines);
@@ -231,4 +244,52 @@ function mergeAdjacentOps(changeSets) {
         }
         return compressedChangeSets;
     }
+}
+
+/**
+ * If an input operation is followed by a delete operation, then we adjust the input operation
+ * so that the delete is swallowed.
+ * 
+ * e.g  "fo" > add "o" results in "foo"
+ * now if we delete the last o, we get "fo" again
+ * if next input is "obar", then we have a single input "foobar"
+ * 
+ * 
+ * Thus this compression level can swallow typos. We cross word boundaries iff level is 3.
+ * 
+ * @param {Array} changeSets 
+ */
+function combineInsertsAndDeletes(changeSets) {
+    // Get all ops on the same line, write into memory, and perform operations in *memory*.
+    // Then we write back as input elements, based on word boundaries
+    let removed = [];
+    const len = changeSets.length;
+    let found;
+    for (let i = 1; i < len; i++) {
+        if (changeSets[i].change.origin === '+delete' && changeSets[i - 1].change.origin === '+input') {
+            found = i;
+            break;
+        }
+    }
+    if (found !== undefined) {
+        // delete, followed by input.
+        // Check if input completely `swallows` delete
+        let start = found - 1;
+        let end = found;
+        let deleteRange = changeSets[end].change;
+        let inputRange = changeSets[start].change;
+        // Now look back -1 && +1, and see if same criteria is met
+        while (start >= 0 && end < len && deleteRange.from.line === inputRange.from.line && deleteRange.from.ch === inputRange.from.ch && (deleteRange.to.ch - 1) === inputRange.to.ch) {
+            removed = removed.concat([start, end]);
+            start -= 1;
+            end -= 1;
+            deleteRange = changeSets[end] && changeSets[end].change;
+            inputRange = changeSets[start] && changeSets[start].change;
+        }
+        changeSets = changeSets.filter((d, i) => removed.indexOf(i) === -1);
+        if (removed.length > 1) {
+            changeSets = combineInsertsAndDeletes(changeSets);
+        }
+    }
+    return changeSets;
 }

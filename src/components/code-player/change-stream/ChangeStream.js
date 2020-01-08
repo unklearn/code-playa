@@ -1,6 +1,56 @@
 import { EventEmitter } from 'fbemitter';
 import { delay, asyncForEach } from './Utils';
 
+function interpolateInputChangeSets(changeSet) {
+  let duration = changeSet.change.duration;
+  let startTime = changeSet.time;
+  // Break down the text into several chunks, that are spread over `duration` ms.
+  // e.g if text contains 5 characters over 100 ms, we split it into 1 char over 20 ms.
+  const text = changeSet.change.text.join('\n');
+  const interval = 100;
+  const middle = Math.round(text.length / 2);
+  let newChangeSets = [];
+  if (text.length === 1 && text.replace('\n', '').length === 0) {
+    return [{
+      time: startTime,
+      change: {
+        origin: '+input',
+        text: ['', ''],
+        from: changeSet.change.from,
+        to: changeSet.change.to
+      }
+    }];
+  }
+  for (let i = 0; i < text.length; i++) {
+    // middle = 5, i = 0, len = 10
+    newChangeSets.push({
+      time: startTime + i * interval * (1 - 0.25 * (middle - i) / text.length),
+      change: {
+        origin: '+input',
+        text: [text[i]],
+        from: {
+          line: changeSet.change.from.line,
+          ch: changeSet.change.from.ch + i
+        },
+        to: {
+          line: changeSet.change.to.line,
+          ch: changeSet.change.from.ch + i + 1
+        }
+      }
+    });
+  }
+  return newChangeSets;
+}
+
+function interpolateChangeSets(changeSet) {
+  switch (changeSet.change.origin) {
+    case '+input':
+      return interpolateInputChangeSets(changeSet);
+  }
+  delete changeSet.change['duration'];
+  return [changeSet];
+}
+
 export class ChangeStream extends EventEmitter {
 	// *********************************************************
 	// Static properties
@@ -70,13 +120,15 @@ export class ChangeStream extends EventEmitter {
     // If we start at `index`. Immediately apply state until that point from `current point`.
     // We start with previous initialState, run a rapid run-through `until index`.
     for (let i = 0; i < this._cs.length; i++) {
-      if (this._cs[i].time >= timestamp) {
+      let start = this._cs[i].time;
+      let end = (this._cs[i].change.duration || 0) + start + 1;
+      if (start >= timestamp && timestamp < end) {
         index = i;
         break;
       }
     }
     // Look for a snapshot, and if we find one, use that.
-    let estimatedProgress = this._calculateProgress(index);
+    let estimatedProgress = this._calculateProgress(this._cs[index].time);
     let snapshotIndex = Math.floor(estimatedProgress * 10);
     let snapshot = this._snapshots[snapshotIndex];
     while (!snapshot && snapshotIndex > 0) {
@@ -88,12 +140,12 @@ export class ChangeStream extends EventEmitter {
     if (snapshot) {
       this._editor.setValue(snapshot.v);
       // The last frame is the time point at which snapshot resides
-      this._cs.slice(snapshot.i + 1, index + 1).forEach((ch) => {
+      this._cs.slice(snapshot.i + 1, index).forEach((ch) => {
         this._editor.applyChange(ch);
       });
     } else {
       this._editor.setValue(this._initialValue);
-      this._cs.slice(0, index + 1).forEach((ch) => {
+      this._cs.slice(0, index).forEach((ch) => {
         this._editor.applyChange(ch);
       });
     }
@@ -109,7 +161,7 @@ export class ChangeStream extends EventEmitter {
     let index = this.reset(timestamp || this._lastFrame);
     this._isPlaying = true;
     this.emit('playing', timestamp);
-    this._applyBatchedChangesWithRAF(this._cs.slice(index + 1, this._cs.length));
+    this._applyBatchedChangesWithRAF(this._cs.slice(index, this._cs.length));
   }
 
 
@@ -157,12 +209,7 @@ export class ChangeStream extends EventEmitter {
       maxFrameDelay,
       speed
     } = this._options;
-  	// Set animation id
-    if (this._animId === null) {
-      return this._animId = requestAnimationFrame(async () => {
-        await this._applyBatchedChangesWithRAF(changeSets);
-      });
-    }
+  
     // If this function is called when we are in playing state, ignore
     if (!this._isPlaying) {
       return;
@@ -177,12 +224,19 @@ export class ChangeStream extends EventEmitter {
       }
       let ch = changeSet.change;
       let indent = ch.text ? (ch.text.indexOf(' ') > -1) : false;
-      this._editor.applyChange(changeSet);
 
+      if (ch.duration !== undefined) {
+        // This means we have to interpolate. We will run await on new interpolated changeSets
+        let interpolatedChs = interpolateChangeSets(changeSet);
+        // Interpolation will change progress computation.
+        return await this._applyBatchedChangesWithRAF(interpolatedChs);
+      } else {
+        this._editor.applyChange(changeSet);
+      }
       // If we have an indent operation, we make it feel "instant".
       let timeDelay;
       if (slice[i + 1]) {
-        timeDelay = indent ? 0 : (Math.min(slice[i + 1].time - slice[i].time, maxFrameDelay) / speed);
+        timeDelay = indent ? 0 : (Math.min(slice[i + 1].time - slice[i].time - (ch.duration || 0), maxFrameDelay) / speed);
       } else {
         timeDelay = 0;
       }
@@ -208,18 +262,17 @@ export class ChangeStream extends EventEmitter {
 
    	// If no more remain, we break
     if (changeSets.length > 0) {
-      this._animId = requestAnimationFrame(async () => {
-        await this._applyBatchedChangesWithRAF(changeSets);
-      });
+      await this._applyBatchedChangesWithRAF(changeSets);
     } else {
-      this._emitProgress(this._calculateProgress(), 0);
+      this._emitProgress(1, 0);
       this.emit('done');
     }
   }
 
-  _calculateProgress(frameIndex) {
-  	let p = frameIndex !== undefined ? this._cs[frameIndex].time : this._lastFrame;
-  	let end = this._cs[this._cs.length - 1].time;
+  _calculateProgress(time) {
+    let p = time || this._lastFrame;
+    let last = this._cs[this._cs.length - 1];
+  	let end = last.time + (last.change.duration || 0);
     let t0 = this._cs[0].time;
     return (p - t0) / (end - t0);
   }

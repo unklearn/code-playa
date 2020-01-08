@@ -190,7 +190,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 				this.handlePlay('playing');
 			});
 		} else if (action === 'compress') {
-			let compressed = compressStream(changeSets, 1);
+			let compressed = compressStream(changeSets, 2);
 			this.setState({
 				changeSets: compressed
 			});
