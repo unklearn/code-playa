@@ -22,8 +22,14 @@
 }
 
 main {
-  margin-left: calc(20% + 50px);
+  margin-left: 0px;
   padding: 25px;
+}
+
+@media(min-width: 1200px) {
+  main {
+    margin-left: calc(20% + 50px);
+  }
 }
 
 .CodeMirror {
