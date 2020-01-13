@@ -1,13 +1,13 @@
 import { EventEmitter } from 'fbemitter';
 import { delay, asyncForEach } from './Utils';
 
-function interpolateInputChangeSets(changeSet) {
+function interpolateInputChangeSets(changeSet, speed) {
   let duration = changeSet.change.duration;
   let startTime = changeSet.time;
   // Break down the text into several chunks, that are spread over `duration` ms.
   // e.g if text contains 5 characters over 100 ms, we split it into 1 char over 20 ms.
   const text = changeSet.change.text.join('\n');
-  const interval = 100;
+  const interval = 100 / (speed);
   const middle = Math.round(text.length / 2);
   let newChangeSets = [];
   if (text.length === 1 && text.replace('\n', '').length === 0) {
@@ -42,10 +42,10 @@ function interpolateInputChangeSets(changeSet) {
   return newChangeSets;
 }
 
-function interpolateChangeSets(changeSet) {
+function interpolateChangeSets(changeSet, speed) {
   switch (changeSet.change.origin) {
     case '+input':
-      return interpolateInputChangeSets(changeSet);
+      return interpolateInputChangeSets(changeSet, speed);
   }
   delete changeSet.change['duration'];
   return [changeSet];
@@ -209,7 +209,6 @@ export class ChangeStream extends EventEmitter {
       maxFrameDelay,
       speed
     } = this._options;
-  
     // If this function is called when we are in playing state, ignore
     if (!this._isPlaying) {
       return;
@@ -227,7 +226,7 @@ export class ChangeStream extends EventEmitter {
 
       if (ch.duration !== undefined) {
         // This means we have to interpolate. We will run await on new interpolated changeSets
-        let interpolatedChs = interpolateChangeSets(changeSet);
+        let interpolatedChs = interpolateChangeSets(changeSet, speed);
         // Interpolation will change progress computation.
         return await this._applyBatchedChangesWithRAF(interpolatedChs);
       } else {

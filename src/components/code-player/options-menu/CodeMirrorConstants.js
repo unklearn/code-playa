@@ -3,6 +3,10 @@ export const MODES = [{
 	type: 'text/x-go',
 	dir: 'go/go'
 }, {
+  name: 'HTML',
+  type: 'text/html',
+  dir: 'htmlmixed/htmlmixed'
+}, {
   name: 'Python',
   type: 'python',
   dir: 'python/python'

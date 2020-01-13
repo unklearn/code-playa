@@ -24,7 +24,7 @@ export default class ControlBar extends BaseComponent {
 						<PlayButton
 							playState={this.props.playState}
 							onClick={this.props.onPlayChange}
-							disabled={this.props.recordState !== 'stop'}
+							disabled={this.props.recordState === 'recording'}
 						/>
 						<RecordButton
 							toggleRecordState={this.props.toggleRecordState}

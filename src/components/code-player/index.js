@@ -54,8 +54,51 @@ export class CodeMirrorPlayer extends BaseComponent {
 		});
 	}
 
-	componentDidUpdate(prevProps) {
-		
+	async loadDataIfNecessary() {
+		let match = /data-uri=([^&]*)/.exec(window.location.search);
+		if (match && match[1]) {
+			this.setState({
+				initialized: true
+			});
+			const url = match[1];
+			let response = await fetch(url);
+			let text = await response.text();
+			// Split by lines
+			let lines = text.split('**');
+			// Shitty parser
+			lines.forEach((line) => {
+				if (line.indexOf('speed') > -1) {
+					let speed = Number(line.split('=')[1]);
+					this.setOption({
+						key: 'speed',
+						value: speed
+					});
+				} else if (line.indexOf('mode') > -1) {
+					let string = line.split('=')[1];
+					let parts = string.split(':');
+					this.setOption({
+						key: 'mode',
+						value: parts[1],
+						directory: parts[0]
+					});
+				} else if (line.indexOf('data') > -1) {
+					let data = line.slice(6);
+					try {
+						this.setState({
+							initialValue: '',
+							changeSets: JSON.parse(data)
+						});
+					} catch (e) {
+						// pass
+						console.error(e, data);
+					}
+				}
+			});
+		}
+	}
+
+	componentDidMount() {
+		this.loadDataIfNecessary();
 	}
 
 	componentWillUnmount() {
@@ -225,7 +268,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 		if (key === 'mode') {
 			this.setMode(directory, value);
 		} else if (key === 'speed') {
-			if (this.stream) {
+			if (this.state.stream) {
 				this.state.stream.setSpeed(value);
 			}
 			this.setState({
