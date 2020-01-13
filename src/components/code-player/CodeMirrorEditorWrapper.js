@@ -20,8 +20,12 @@ export default class CodeMirrorEditorWrapper {
     let ch = changeSet.change;
     switch (ch.origin) {
       case "+input":
-      case "paste":
         this._insertTextAtCursor(cm, ch, ch.text.join("\n"))
+        break;
+      case "paste":
+        this._insertTextAtCursor(cm, {
+          from: ch.from
+        }, ch.text.join("\n"))
         break;
       case "+delete":
         this._deleteCharacters(cm, ch);

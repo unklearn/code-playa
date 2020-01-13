@@ -51,15 +51,16 @@ export class CodeMirrorPlayer extends BaseComponent {
 		let editor = new CodeMirrorEditorWrapper(this.instance, this.addChange)
 		this.setState({
 			editor
+		}, () => {
+			if (this.state.changeSets && this.state.changeSets.length) {
+				this.handlePlay('playing');
+			}
 		});
 	}
 
 	async loadDataIfNecessary() {
 		let match = /data-uri=([^&]*)/.exec(window.location.search);
 		if (match && match[1]) {
-			this.setState({
-				initialized: true
-			});
 			const url = match[1];
 			let response = await fetch(url);
 			let text = await response.text();
@@ -174,7 +175,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 				/>}
 				</div>
 				<RecordingsList recordings={recordings} handleRecordingAction={this.handleRecordingAction}/>
-				{!initialized && <div className='unk-code-playa__logo' onClick={() => this.setState({ initialized: true })}>
+				{!initialized && <div className='unk-code-playa__logo' onClick={this.startPlayer}>
 					<CodePlayaLogo/>
 				</div>}
 				{initialized && <ControlBar 
@@ -193,6 +194,12 @@ export class CodeMirrorPlayer extends BaseComponent {
 				/>}
 			</div>
 		);
+	}
+
+	startPlayer() {
+		this.setState({
+			initialized: true
+		});
 	}
 	
 	toggleRecordState() {
