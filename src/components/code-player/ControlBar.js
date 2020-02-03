@@ -2,7 +2,7 @@ import React from 'react';
 import PlayButton from './play-button/PlayButton';
 import ProgressBar from './progress-bar';
 import BaseComponent from 'shared/BaseComponent';
-import { OptionsMenu } from './options-menu';
+import { OptionsMenu, DownloadIcon } from './options-menu';
 import RecordButton from './record-button/RecordButton';
 import './ControlBar.css';
 
@@ -32,6 +32,7 @@ export default class ControlBar extends BaseComponent {
 						/>
 					</div>
 					<div className='unk-code-playa-control-bar__cell unk-code-playa-control-bar__cell--right'>
+						<DownloadIcon onClick={this.props.download}/>
 						<OptionsMenu
 							options={this.props.options}
 							setOption={this.props.setOption}

@@ -8,6 +8,7 @@ import { ChangeStream, compressStream } from './change-stream';
 import CodeMirrorEditorWrapper from './CodeMirrorEditorWrapper';
 import { RecordingsList } from './recordings-list';
 import { ReactComponent as CodePlayaLogo } from '../../assets/codeplaya_black.svg';
+import CPDWriter from 'components/cpd/DataLoader';
 import 'codemirror/lib/codemirror.css';
 import 'assets/monokai.css';
 
@@ -64,37 +65,19 @@ export class CodeMirrorPlayer extends BaseComponent {
 			const url = match[1];
 			let response = await fetch(url);
 			let text = await response.text();
-			// Split by lines
-			let lines = text.split('**');
-			// Shitty parser
-			lines.forEach((line) => {
-				if (line.indexOf('speed') > -1) {
-					let speed = Number(line.split('=')[1]);
-					this.setOption({
-						key: 'speed',
-						value: speed
-					});
-				} else if (line.indexOf('mode') > -1) {
-					let string = line.split('=')[1];
-					let parts = string.split(':');
-					this.setOption({
-						key: 'mode',
-						value: parts[1],
-						directory: parts[0]
-					});
-				} else if (line.indexOf('data') > -1) {
-					let data = line.slice(6);
-					try {
-						this.setState({
-							initialValue: '',
-							changeSets: JSON.parse(data)
-						});
-					} catch (e) {
-						// pass
-						console.error(e, data);
-					}
-				}
-			});
+			let { options, recording } = CPDWriter.parse(text);
+			if (options.speed) {
+				this.setOption({ key: 'speed', value: options.speed });
+			}
+			if (options.mode) {
+				this.setOption({ key: 'mode', value: options.mode, directory: options.directory });
+			}
+			if (recording) {
+				this.setState({
+					initialValue: '',
+					changeSets: recording
+				});
+			}
 		}
 	}
 
@@ -183,6 +166,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 						mode,
 						speed
 					}}
+					download={this.handleDownload}
 					changeSetCount={changeSets.length}
 					toggleRecordState={this.toggleRecordState}
 					recordState={recordState}
@@ -192,6 +176,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 					setOption={this.setOption}
 					onPlayChange={this.handlePlay}
 				/>}
+				{this.state.cpd && <pre className='cpd-file'>{this.state.cpd}</pre>}
 			</div>
 		);
 	}
@@ -253,6 +238,17 @@ export class CodeMirrorPlayer extends BaseComponent {
 		}
 	}
 
+	handleDownload() {	
+		const cpd = CPDWriter.write(this.state.changeSets, {
+			mode: this.state.mode,
+			speed: this.state.speed,
+			directory: this.state.directory
+		});
+		this.setState({
+			cpd
+		});
+	}
+
 	setProgress(progress) {
 		let {
 			changeSets,
@@ -288,7 +284,8 @@ export class CodeMirrorPlayer extends BaseComponent {
 	async setMode(directory, mode) {
 		await import(`codemirror/mode/${directory}`).then(() => {
 			this.setState({
-				mode
+				mode,
+				directory
 			}, () => {
 				if (this.instance) {
 					this.instance.setOption('mode', mode);

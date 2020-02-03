@@ -11,6 +11,16 @@
 	transition: 0.3s transform ease;
 }
 
+.unk-code-playa-options-menu__download-icon {
+	fill: #d6d6d6;
+	cursor: pointer;
+	margin: 0px 5px;
+}
+
+.unk-code-playa-options-menu__download-icon:hover {
+	fill: white;
+}
+
 .unk-code-playa-options-menu__gear-icon:hover {
 	fill: #ffffff;
 	transform: rotate(20deg);
