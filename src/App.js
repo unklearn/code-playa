@@ -31,6 +31,10 @@ function App() {
           <p>
             The project source is located <a href='https://github.com/unklearn/code-playa' target='_blank'>here</a>
           </p>
+          <blockquote style={{"color": "red"}}>
+            Warning! Alpha state software. This is more of a hackathon than a complete project. APIs may change without
+            notice
+          </blockquote>
           <p>
             &copy; TMP
           </p>

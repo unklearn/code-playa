@@ -94,6 +94,7 @@ export default class CodeMirrorEditorWrapper {
    */
   _insertTextAtCursor(editor, range, text) {
     let doc = this._cm.getDoc();
+    this._cm.scrollIntoView(range.from);
     doc.replaceRange(text, range.from, range.to);
   }
 
