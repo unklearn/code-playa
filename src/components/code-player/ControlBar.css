@@ -28,6 +28,14 @@
 	padding: 0px 15px;
 }
 
+.unk-code-playa__about {
+	font-size: 10px;
+    color: white;
+    position: relative;
+    top: -10px;
+    margin-right: 10px;
+}
+
 .unk-code-playa__logo {
 	width: 80px;
 	height: 80px;
