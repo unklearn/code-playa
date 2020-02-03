@@ -40,7 +40,7 @@ function App() {
           </p>
       </Sidebar>}
       <main style={{
-        margin: iframe ? '0px': 'auto',
+        margin: iframe ? '0px': undefined,
         padding: iframe ? '0px' : '25px'
       }}>
         <CodeMirrorPlayer editing/>
