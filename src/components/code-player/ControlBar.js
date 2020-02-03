@@ -5,6 +5,17 @@ import BaseComponent from 'shared/BaseComponent';
 import { OptionsMenu, DownloadIcon } from './options-menu';
 import RecordButton from './record-button/RecordButton';
 import './ControlBar.css';
+let iframe = false;
+if (window.top!=window.self)
+{
+  // In a Frame or IFrame
+  iframe = true;
+}
+else
+{
+  // Not in a frame
+  iframe = false;
+} 
 
 export default class ControlBar extends BaseComponent {
 	render() {
@@ -33,7 +44,7 @@ export default class ControlBar extends BaseComponent {
 					</div>
 					<div className='unk-code-playa-control-bar__cell unk-code-playa-control-bar__cell--right'>
 						<a className='unk-code-playa__about' href="https://unklearn.github.io/code-playa/">About</a>
-						<DownloadIcon onClick={this.props.download}/>
+						{!iframe && <DownloadIcon onClick={this.props.download}/>}
 						<OptionsMenu
 							options={this.props.options}
 							setOption={this.props.setOption}
