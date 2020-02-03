@@ -62,6 +62,9 @@ export class CodeMirrorPlayer extends BaseComponent {
 	async loadDataIfNecessary() {
 		let match = /data-uri=([^&]*)/.exec(window.location.search);
 		if (match && match[1]) {
+			this.setState({
+				loading: true
+			});
 			const url = match[1];
 			let response = await fetch(url);
 			let text = await response.text();
@@ -78,11 +81,10 @@ export class CodeMirrorPlayer extends BaseComponent {
 					changeSets: recording
 				});
 			}
+			this.setState({
+				loading: false
+			});
 		}
-	}
-
-	componentDidMount() {
-		this.loadDataIfNecessary();
 	}
 
 	componentWillUnmount() {
@@ -137,6 +139,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 			changeSets,
 			recordState,
 			recordings,
+			loading,
 			initialValue
 		} = this.state;
 		return (
@@ -158,8 +161,11 @@ export class CodeMirrorPlayer extends BaseComponent {
 				/>}
 				</div>
 				<RecordingsList recordings={recordings} handleRecordingAction={this.handleRecordingAction}/>
-				{!initialized && <div className='unk-code-playa__logo' onClick={this.startPlayer}>
+				{!initialized && !loading && <div className='unk-code-playa__logo' onClick={this.startPlayer}>
 					<CodePlayaLogo/>
+				</div>}
+				{loading && <div className='unk-code-playa__logo' onClick={this.startPlayer}>
+					<div className='unk-code-playa__spinner lds-dual-ring'></div>
 				</div>}
 				{initialized && <ControlBar 
 					options={{
@@ -181,7 +187,8 @@ export class CodeMirrorPlayer extends BaseComponent {
 		);
 	}
 
-	startPlayer() {
+	async startPlayer() {
+		await this.loadDataIfNecessary();
 		this.setState({
 			initialized: true
 		});
