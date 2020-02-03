@@ -1,10 +1,10 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "b05ed61ff60314013f55ed6653b5595f",
+    "revision": "4fdc807dcbea65e3707bd7e9b37b6d9c",
     "url": "/code-playa/index.html"
   },
   {
-    "revision": "59dcfae7ee756c40d456",
+    "revision": "e9c6332d3dcff44ff13e",
     "url": "/code-playa/static/css/123.7fd08c2a.chunk.css"
   },
   {
@@ -16,8 +16,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/code-playa/static/css/125.19b5585c.chunk.css"
   },
   {
-    "revision": "79e8a103f0f52edad6e3",
-    "url": "/code-playa/static/css/main.8a286434.chunk.css"
+    "revision": "589692294078ad6dd15d",
+    "url": "/code-playa/static/css/main.f3f938c6.chunk.css"
   },
   {
     "revision": "9d489be41fc47ad17aa3",
@@ -124,8 +124,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/code-playa/static/js/120.dcd45725.chunk.js"
   },
   {
-    "revision": "59dcfae7ee756c40d456",
-    "url": "/code-playa/static/js/123.23dcca1f.chunk.js"
+    "revision": "e9c6332d3dcff44ff13e",
+    "url": "/code-playa/static/js/123.2d041a04.chunk.js"
   },
   {
     "revision": "8aa0fdad3d9d8eb99c41",
@@ -520,8 +520,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/code-playa/static/js/99.70276b76.chunk.js"
   },
   {
-    "revision": "79e8a103f0f52edad6e3",
-    "url": "/code-playa/static/js/main.7fb51925.chunk.js"
+    "revision": "589692294078ad6dd15d",
+    "url": "/code-playa/static/js/main.7ec34451.chunk.js"
   },
   {
     "revision": "f13c230831896f771cbd",
