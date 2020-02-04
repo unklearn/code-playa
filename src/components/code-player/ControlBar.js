@@ -37,10 +37,10 @@ export default class ControlBar extends BaseComponent {
 							onClick={this.props.onPlayChange}
 							disabled={this.props.recordState === 'recording'}
 						/>
-						<RecordButton
+						{!iframe && <RecordButton
 							toggleRecordState={this.props.toggleRecordState}
 							recordState={this.props.recordState}
-						/>
+						/>}
 					</div>
 					<div className='unk-code-playa-control-bar__cell unk-code-playa-control-bar__cell--right'>
 						<a target='_blank' className='unk-code-playa__about' href="https://unklearn.github.io/code-playa/">About</a>
