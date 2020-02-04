@@ -36,7 +36,7 @@ function App() {
             notice
           </blockquote>
           <p>
-            &copy; TMP
+            &copy; <a href='https://github.com/tmpaul' target='_blank'>TMP</a>
           </p>
       </Sidebar>}
       <main style={{
