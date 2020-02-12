@@ -146,7 +146,7 @@ export class CodeMirrorPlayer extends BaseComponent {
 			<div className='unk-code-playa'>
 				<div style={{
 					background: '#1d1d1d',
-					height: 300,
+					height: (Math.min(300, window.innerHeight - 50)) + 'px',
 					pointerEvents: initialized ? 'all' : 'none'
 				}}>
 				{initialized && <CodeMirror
