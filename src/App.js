@@ -44,6 +44,7 @@ function App() {
         padding: iframe ? '0px' : '25px'
       }}>
         <CodeMirrorPlayer editing/>
+        <p>Click the yellow button to start recording. Then start typing code in the editor (default language is golang). Once you're finished, press the red square button to stop recording.</p>
       </main>
     </div>
   );
